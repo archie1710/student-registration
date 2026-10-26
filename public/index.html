@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Student Registration</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<style>
+*{box-sizing:border-box}body{font-family:Arial,sans-serif;background:#f1f5f9;color:#243043;padding:24px;margin:0}main{max-width:650px;margin:30px auto;padding:24px;background:white;border-radius:10px}label{display:block;margin:16px 0 6px}input{width:100%;padding:10px;font:inherit;border:1px solid #aaa;border-radius:5px}button{padding:10px 20px;margin-top:16px;background:#2563eb;color:white;border:0;border-radius:5px;font:inherit;cursor:pointer}button:disabled{opacity:.6}table{width:100%;border-collapse:collapse}th,td{padding:12px;border:1px solid #ddd;text-align:left;overflow-wrap:anywhere}th{background:#eff6ff}[v-cloak]{display:none}
+</style>
+</head>
+<body>
+<main id="app" v-cloak>
+<h1>Student Registration</h1>
+<form @submit.prevent="saveStudent">
+<label for="student-id">Student ID</label>
+<input id="student-id" v-model="studentId" maxlength="20" required>
+<label for="student-name">Student Name</label>
+<input id="student-name" v-model="studentName" maxlength="100" required>
+<button :disabled="saving">{{saving ? 'Saving...' : 'Save Student'}}</button>
+</form>
+<p role="status">{{message}}</p>
+<h2>Registered Students</h2>
+<table><thead><tr><th scope="col">Student ID</th><th scope="col">Name</th></tr></thead>
+<tbody>
+<tr v-for="student in students" :key="student.student_id"><td>{{student.student_id}}</td><td>{{student.name}}</td></tr>
+<tr v-if="!students.length"><td colspan="2">{{loading ? 'Loading...' : 'No students to display.'}}</td></tr>
+</tbody></table>
+</main>
+<script>
+Vue.createApp({
+ data(){return {studentId:'',studentName:'',students:[],message:'',saving:false,loading:true}},
+ async mounted(){
+  try{const response=await fetch('/students');if(!response.ok)throw new Error('Could not load students.');this.students=await response.json();}
+  catch(error){this.message=error.message;}finally{this.loading=false;}
+ },
+ methods:{async saveStudent(){
+  if(this.saving)return;
+  const student_id=this.studentId.trim(),name=this.studentName.trim();
+  if(!student_id||!name){this.message='Please enter both ID and name.';return;}
+  this.saving=true;this.message='';
+  try{
+   const response=await fetch('/students',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({student_id,name})});
+   const result=await response.json();if(!response.ok)throw new Error(result.error||'Could not save student.');
+   const existing=this.students.findIndex(s=>s.student_id===result.student_id);
+   if(existing===-1)this.students.push(result);else this.students.splice(existing,1,result);
+   this.studentId='';this.studentName='';this.message='Student saved successfully!';
+  }catch(error){this.message=error.message;}finally{this.saving=false;}
+ }}
+}).mount('#app');
+</script>
+</body>
+</html>
